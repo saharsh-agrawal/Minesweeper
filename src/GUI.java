@@ -293,16 +293,40 @@ public class GUI extends JFrame{
     
     public class Move implements MouseMotionListener
     {
-    	@Override
+        int lastMinX = -1;
+        int lastMinY = -1;
+        @Override
         public void mouseMoved(MouseEvent e) {
             mx=e.getX();
             my=e.getY();
+            hover();
         }
     	@Override
         public void mouseDragged(MouseEvent e) {
     		mx=e.getX();
             my=e.getY();
+            hover();
     	}
+        // repaint on hover new cell/none
+        private void hover(){
+            if (my > gap+titleBar) {
+                int currentMinX = mx - (mx % l)+spacing;
+                int currentMaxX = mx - (mx % l)+l-spacing;
+                int currentMinY = my - ((my-gap-titleBar) %l)+spacing;
+                int currentMaxY = my - ((my-gap-titleBar) % l)+l-spacing;
+                if (mx >= currentMinX && my >= currentMinY  && mx < currentMaxX && my < currentMaxY){
+                    if (lastMinX != currentMinX || lastMinY != currentMinY) {
+                        lastMinX = currentMinX;
+                        lastMinY = currentMinY;
+                        repaint();
+                    }
+                }else {
+                    lastMinX = -1;
+                    lastMinY = -1;
+                    repaint();
+                }
+            }
+        }
     }
     
     public class Click implements MouseListener
@@ -345,6 +369,7 @@ public class GUI extends JFrame{
                 	flag(x,y);
             }
             checkVictory();
+            repaint();
         }
         @Override
         public void mouseEntered(MouseEvent e) {}
@@ -450,6 +475,7 @@ public class GUI extends JFrame{
                 flagged[i][j]=false;
             }
         }
+        repaint();
     }
     
     void setMines()
