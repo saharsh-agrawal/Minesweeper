@@ -1,9 +1,12 @@
 import java.io.*;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.json.JSONObject;
 
 public class HighScoreManager {
     private static final String HIGH_SCORE_DIR = System.getProperty("user.home") + File.separator + "Minesweeper";
     private static final File HIGH_SCORE_FILE = new File(HIGH_SCORE_DIR, "highScores.json");
+	private static final Logger LOGGER = Logger.getLogger(HighScoreManager.class.getName());
 
     static {
         try {
@@ -17,7 +20,7 @@ public class HighScoreManager {
                 }
             }
         } catch (IOException e) {
-            e.printStackTrace();
+			LOGGER.log(Level.WARNING, "Failed to initialize high score storage.", e);
         }
     }
 
@@ -30,7 +33,8 @@ public class HighScoreManager {
             }
             return new JSONObject(jsonData.toString());
         } catch (IOException e) {
-            return new JSONObject();
+			LOGGER.log(Level.WARNING, "Failed to read high scores, using empty data.", e);
+			return new JSONObject();
         }
     }
 

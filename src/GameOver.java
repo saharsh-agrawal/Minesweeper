@@ -19,7 +19,7 @@ public class GameOver extends JFrame {
 		setResizable(false);
 		setAlwaysOnTop(true);
 		setTitle("GAME OVER");
-		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+		setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 		setBounds(100, 100, 450, 300);
 		contentPane = new JPanel();
 		contentPane.setBorder(new EmptyBorder(5, 5, 5, 5));
@@ -52,7 +52,7 @@ public class GameOver extends JFrame {
 		lblMinesLeft.setBounds(33, 39, 140, 37);
 		contentPane.add(lblMinesLeft);
 		
-		JLabel lblMinesLeftAnswer = new JLabel(""+(gui.mineCount-gui.flaggedCount));
+		JLabel lblMinesLeftAnswer = new JLabel(""+(gui.getMineCount()-gui.getFlaggedCount()));
 		lblMinesLeftAnswer.setHorizontalAlignment(SwingConstants.CENTER);
 		lblMinesLeftAnswer.setFont(new Font("Tahoma", Font.PLAIN, 13));
 		lblMinesLeftAnswer.setBounds(253, 39, 140, 37);
@@ -64,7 +64,7 @@ public class GameOver extends JFrame {
 		lblTimetaken.setBounds(33, 74, 140, 37);
 		contentPane.add(lblTimetaken);
 		
-		JLabel lblTimeTakenAnswer = new JLabel(gui.sec+" seconds");
+		JLabel lblTimeTakenAnswer = new JLabel(gui.getElapsedSeconds()+" seconds");
 		lblTimeTakenAnswer.setHorizontalAlignment(SwingConstants.CENTER);
 		lblTimeTakenAnswer.setFont(new Font("Tahoma", Font.PLAIN, 13));
 		lblTimeTakenAnswer.setBounds(253, 74, 140, 37);
@@ -76,15 +76,15 @@ public class GameOver extends JFrame {
 		lblBestTime.setBounds(33, 112, 140, 37);
 		contentPane.add(lblBestTime);
 		
-		JLabel lblBestTimeAnswer = new JLabel(highScore(gui.difficulty,gui.sec,gui.gameState));
+		JLabel lblBestTimeAnswer = new JLabel(highScore(gui));
 		lblBestTimeAnswer.setHorizontalAlignment(SwingConstants.CENTER);
 		lblBestTimeAnswer.setFont(new Font("Tahoma", Font.PLAIN, 13));
 		lblBestTimeAnswer.setBounds(253, 112, 140, 37);
 		contentPane.add(lblBestTimeAnswer);
 		
 		String msg="";
-		if(gui.gameState=='w') msg="Congratulations!!! You have Won!!!";
-		if(gui.gameState=='l') msg="Oops!!! You have Lost!!!";
+		if(gui.getGameState()==GameState.WON) msg="Congratulations!!! You have Won!!!";
+		if(gui.getGameState()==GameState.LOST) msg="Oops!!! You have Lost!!!";
 		
 		JLabel lblNewLabel = new JLabel(msg);
 		lblNewLabel.setFont(new Font("Perpetua Titling MT", Font.BOLD, 15));
@@ -94,20 +94,19 @@ public class GameOver extends JFrame {
 		
 	}
 	
-	private String highScore(char diff, int score, char gameState) {
-        try {
-            if (gameState == 'w') {
-                String level = diff == 'e' ? "Easy" : diff == 'm' ? "Medium" : "Hard";
-                HighScoreManager.updateHighScore(level, score);
-            }
-            String level = diff == 'e' ? "Easy" : diff == 'm' ? "Medium" : "Hard";
-            int bestTime = HighScoreManager.getHighScore(level);
-            return bestTime == 0 ? "(N.A.)" : bestTime + " seconds";
+	private String highScore(GUI gui) {
+	        try {
+	        	String level = gui.getDifficulty() == 'e' ? "Easy" : gui.getDifficulty() == 'm' ? "Medium" : "Hard";
+	            if (gui.getGameState() == GameState.WON) {
+	                HighScoreManager.updateHighScore(level, gui.getElapsedSeconds());
+	            }
+	            int bestTime = HighScoreManager.getHighScore(level);
+	            return bestTime == 0 ? "(N.A.)" : bestTime + " seconds";
 
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        return "(N.A.)";
+	        } catch (IOException e) {
+	            e.printStackTrace();
+	        }
+	        return "(N.A.)";
     }
 	
 	

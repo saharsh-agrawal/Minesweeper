@@ -4,51 +4,56 @@ import java.awt.*;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 
 public class GUI extends JFrame{
     
-	char gameState;
+	private GameState gameState;
+    private Board board;
 	
-	public char difficulty;
-    public int a;//columns
-	public int b;//rows
-	public int l;//size of cell
-	public int spacing;//spacing
-	public int mineCount;//no of mines
+	private final char difficulty;
+    private int a; // columns
+	private int b; // rows
+	private int l; // size of cell
+	private int spacing; // spacing
+	private int mineCount; // no of mines
 	
-	public int fontSize;
-	public int cellPadding;
+	private int fontSize;
+	private int cellPadding;
 	
-	public int titleBar=31;
-	public int gap=57;
+	private int titleBar=31;
+	private int gap=57;
 	
 	int mx=-100;
     int my=-100;
     
-    public int msgX;
-    public int msgY;
+    int msgX;
+    int msgY;
     
-    public int autoPlayX;
-    public int autoPlayY;
-    public boolean autoPlay;
+    int autoPlayX;
+    int autoPlayY;
+    boolean autoPlay;
     
-    public int smileyX;
-    public int smileyY;
+    int smileyX;
+    int smileyY;
     
-    public int minesLeftX;
-    public int minesLeftY;
+    int minesLeftX;
+    int minesLeftY;
     
     Date startDate;
-    public int sec;
-    public int timeX;
-    public int timeY;
+    int sec;
+    int timeX;
+    int timeY;
     
-    public int revealedCount,flaggedCount;
+    int revealedCount,flaggedCount;
     
     int[][] mines;
     int[][] neighbours;
     boolean[][] revealed;
     boolean[][] flagged;
+
+	private javax.swing.Timer timer;
     
     public GUI(char diff){
         
@@ -105,15 +110,17 @@ public class GUI extends JFrame{
         timeY=4;
        
         restart();
-    	setMines();
+		setMines();
+		startTimer();
         
         this.setTitle("Minesweeper");
         this.setSize(a*l+16,b*l+95);
+        // Main game window: closing it should exit the application
         this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         this.setVisible(true);
         this.setResizable(false);
         
-        Board board=new Board();
+        board=new Board();
         this.setContentPane(board);
         
         Move move=new Move();
@@ -126,20 +133,20 @@ public class GUI extends JFrame{
     public class Board extends JPanel{
         @Override
         public void paintComponent(Graphics g){
-            //game board
+            // game board
         	g.setColor(Color.DARK_GRAY);
             g.fillRect(0,0,a*l,b*l+gap);
             
-            //msgbox
+            // msgbox
             String msg="";
             switch(gameState)
             {
-            	case 'w':
+            	case WON:
             		msg="YOU WIN!";
             		g.setColor(Color.green);
             		msgY=40;
             		break;
-            	case 'l':
+            	case LOST:
             		msg="YOU LOST!";
                 	g.setColor(Color.red);
                 	msgY=40;
@@ -149,7 +156,7 @@ public class GUI extends JFrame{
             g.drawString(msg,msgX,msgY);
             
             
-            //autoplay button
+            // autoplay button
             g.setColor(Color.black);
             g.setFont(new Font("Tahoma",Font.BOLD,25));
             g.fillRect(autoPlayX,autoPlayY,130,50);
@@ -157,13 +164,13 @@ public class GUI extends JFrame{
             g.drawString("Auto Play",autoPlayX+6,autoPlayY+35);
             
             
-          //smiley painting
+          // smiley painting
             g.setColor(Color.yellow);
             g.fillOval(smileyX,smileyY,50,50);
             g.setColor(Color.black);
             g.fillOval(smileyX+10,smileyY+12,10,10);
             g.fillOval(smileyX+30,smileyY+12,10,10);
-            if(gameState=='l')
+            if(gameState==GameState.LOST)
             {
                 g.fillRect(smileyX+12,smileyY+32,26,5);
                 
@@ -173,7 +180,7 @@ public class GUI extends JFrame{
                 g.fillRect(smileyX+10,smileyY+36,5,5);
                 g.fillRect(smileyX+35,smileyY+36,5,5);
             }
-            else if(gameState=='w' || gameState=='o' || gameState=='c')
+            else if(gameState==GameState.WON || gameState==GameState.OPEN)
             {
                 g.fillRect(smileyX+12,smileyY+36,26,5);
 
@@ -184,15 +191,15 @@ public class GUI extends JFrame{
                 g.fillRect(smileyX+35,smileyY+32,5,5);
             }
             
-          //mines left display
+          // mines left display
             g.setColor(Color.white);
             g.setFont(new Font("Tahoma",Font.BOLD,28));
             g.drawString("Mines left: "+(mineCount-flaggedCount),minesLeftX,minesLeftY);
             
-            //timer display
+            // timer display
             g.setColor(Color.black);
             g.fillRect(timeX,timeY,100,50);
-            if(gameState=='o') sec=(int)((new Date().getTime()-startDate.getTime())/1000);
+            if(gameState==GameState.OPEN) sec=(int)((new Date().getTime()-startDate.getTime())/1000);
             
             String time=sec+"";
             if(sec<10) time="00"+time;
@@ -200,21 +207,21 @@ public class GUI extends JFrame{
             if(sec>999) time="999";
             
             g.setColor(Color.white);
-            if(gameState=='w') g.setColor(Color.green);
-            if(gameState=='l') g.setColor(Color.red);
+            if(gameState==GameState.WON) g.setColor(Color.green);
+            if(gameState==GameState.LOST) g.setColor(Color.red);
             g.setFont(new Font("Tahoma",Font.BOLD,40));
             g.drawString(time,timeX+16,timeY+40);
             
-            //divider line
+            // divider line
             g.setColor(Color.gray);
             g.fillRect(0,gap-1,a*l,1);
             
-            //a by b will be the grid...each box l*l pixels with 'spacing' padding within
-            //cells
+            // a by b will be the grid...each box l*l pixels with 'spacing' padding within
+            // cells
             for(int i=0;i<a;i++){
                 for(int j=0;j<b;j++){
                     
-                    //background
+                    // background
                     g.setColor(new Color(10,110,210));
                     
                     if(revealed[i][j])
@@ -223,13 +230,13 @@ public class GUI extends JFrame{
                         if(mines[i][j]==1)
                             g.setColor(Color.red);
                     }
-                    //background when hover
+                    // background when hover
                     if(mx>=l*i+spacing && mx<l*i+l-spacing && my>=j*l+spacing+gap+titleBar && my<j*l+l-spacing+gap+titleBar)
                         g.setColor(Color.LIGHT_GRAY);
                     
                     g.fillRect(l*i+spacing,j*l+spacing+gap, l-2*spacing, l-2*spacing);
                     
-                    //flags
+                    // flags
                     if(flagged[i][j])
                     {
                     	g.setColor(Color.red);
@@ -239,7 +246,7 @@ public class GUI extends JFrame{
                         g.fillRect(l*i+spacing+15*l/70,j*l+spacing+gap+57*l/70,30*l/70,5*l/70);
                     }
                     
-                    //number or mine
+                    // number or mine
                     if(revealed[i][j])
                     {
                         if(mines[i][j]==0 && neighbours[i][j]!=0)
@@ -293,8 +300,7 @@ public class GUI extends JFrame{
     
     public class Move implements MouseMotionListener
     {
-        int lastMinX = -1;
-        int lastMinY = -1;
+        Point lastCell = null;
         @Override
         public void mouseMoved(MouseEvent e) {
             mx=e.getX();
@@ -309,20 +315,15 @@ public class GUI extends JFrame{
     	}
         // repaint on hover new cell/none
         private void hover(){
-            if (my > gap+titleBar) {
-                int currentMinX = mx - (mx % l)+spacing;
-                int currentMaxX = mx - (mx % l)+l-spacing;
-                int currentMinY = my - ((my-gap-titleBar) %l)+spacing;
-                int currentMaxY = my - ((my-gap-titleBar) % l)+l-spacing;
-                if (mx >= currentMinX && my >= currentMinY  && mx < currentMaxX && my < currentMaxY){
-                    if (lastMinX != currentMinX || lastMinY != currentMinY) {
-                        lastMinX = currentMinX;
-                        lastMinY = currentMinY;
-                        repaint();
-                    }
-                }else {
-                    lastMinX = -1;
-                    lastMinY = -1;
+            Point currentCell = getCellFromMouse(mx, my);
+            if (currentCell != null) {
+                if (lastCell == null || !lastCell.equals(currentCell)) {
+                    lastCell = currentCell;
+                    repaint();
+                }
+            } else {
+                if (lastCell != null) {
+                    lastCell = null;
                     repaint();
                 }
             }
@@ -341,10 +342,10 @@ public class GUI extends JFrame{
         	mx=e.getX();
             my=e.getY();
             
-            if(inSmiley() && gameState=='o')
+            if(inSmiley())
             	newGame();
             
-            if(mx>autoPlayX && mx<autoPlayX+130 && my-titleBar>autoPlayY && my-titleBar<autoPlayY+50)
+            if(gameState==GameState.OPEN && (mx>autoPlayX && mx<autoPlayX+130 && my-titleBar>autoPlayY && my-titleBar<autoPlayY+50))
             {
             	if(!autoPlay)
             		autoPlay=true;
@@ -353,10 +354,11 @@ public class GUI extends JFrame{
             	System.out.println(autoPlay);
             }
             	
-            int x=inBoxX();
-            int y=inBoxY();
-            if(x!=-1 && y!=-1 && gameState=='o')
+            	Point cell = getCellFromMouse(mx, my);
+            	if(cell != null && gameState==GameState.OPEN)
             {
+            		int x = cell.x;
+            		int y = cell.y;
             	if(SwingUtilities.isLeftMouseButton(e))
             	{
             		if(e.getClickCount()==1)
@@ -402,7 +404,7 @@ public class GUI extends JFrame{
             revealedCount++;
             if(mines[x][y]==1)
             {
-            	gameState='l';
+            		gameState=GameState.LOST;
             	new GameOver(this).setVisible(true);
             	return;
             }
@@ -448,9 +450,9 @@ public class GUI extends JFrame{
     
     void checkVictory()
     {
-    	if(a*b-revealedCount==mineCount && gameState=='o')
+        if(a*b-revealedCount==mineCount && gameState==GameState.OPEN)
         {
-        	gameState='w';
+            	gameState=GameState.WON;
         	new GameOver(this).setVisible(true);
         }
     }
@@ -464,7 +466,7 @@ public class GUI extends JFrame{
     public void restart()
     {
     	autoPlay=false;
-    	gameState='o';
+        gameState=GameState.OPEN;
     	revealedCount=flaggedCount=sec=0;
     	msgY=-100;
     	startDate=new Date();
@@ -518,7 +520,22 @@ public class GUI extends JFrame{
             }
         }
     }
-    
+
+    private void startTimer() {
+        if (timer != null) {
+                timer.stop();
+        }
+        timer = new javax.swing.Timer(1000, new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                if (board != null) {
+					board.repaint(timeX, timeY, 100, 50);
+				}
+            }
+        });
+        timer.start();
+    }
+
     public boolean inSmiley()
     {
     	double diff=Math.sqrt((mx-(smileyX+25))*(mx-(smileyX+25))+(my-titleBar-(smileyY+25))*(my-titleBar-(smileyY+25)));
@@ -528,23 +545,47 @@ public class GUI extends JFrame{
     		return false;
     }
     
-    public int inBoxX(){
-        for(int i=0;i<a;i++){
-                for(int j=0;j<b;j++){
-                    if(mx>=l*i+spacing && mx<l*i+l-spacing && my>=j*l+spacing+gap+titleBar && my<j*l+l-spacing+gap+titleBar)
-                        return i;
-                }
-            }
-        return -1;
+
+    private Point getCellFromMouse(int mouseX, int mouseY) {
+        if (mouseY < gap + titleBar || mouseY >= gap + titleBar + b * l) {
+            return null;
+        }
+        if (mouseX < 0 || mouseX >= a * l) {
+            return null;
+        }
+        int cellX = mouseX / l;
+        int cellY = (mouseY - gap - titleBar) / l;
+        if (cellX < 0 || cellX >= a || cellY < 0 || cellY >= b) {
+            return null;
+        }
+        int cellMinX = cellX * l + spacing;
+        int cellMaxX = cellX * l + l - spacing;
+        int cellMinY = cellY * l + spacing + gap + titleBar;
+        int cellMaxY = cellY * l + l - spacing + gap + titleBar;
+        if (mouseX >= cellMinX && mouseX < cellMaxX && mouseY >= cellMinY && mouseY < cellMaxY) {
+            return new Point(cellX, cellY);
+        }
+        return null;
     }
-    public int inBoxY(){
-        for(int i=0;i<a;i++){
-                for(int j=0;j<b;j++){
-                    if(mx>=l*i+spacing && mx<l*i+l-spacing && my>=j*l+spacing+gap+titleBar && my<j*l+l-spacing+gap+titleBar)
-                        return j;
-                }
-            }
-        return -1;
+	
+    public GameState getGameState() {
+        return gameState;
     }
-    
+
+    public char getDifficulty() {
+        return difficulty;
+    }
+
+    public int getMineCount() {
+        return mineCount;
+    }
+
+    public int getFlaggedCount() {
+        return flaggedCount;
+    }
+
+    public int getElapsedSeconds() {
+        return sec;
+    }
+	
 }

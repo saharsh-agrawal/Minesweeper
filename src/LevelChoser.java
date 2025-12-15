@@ -14,10 +14,9 @@ public class LevelChoser extends JFrame {
 
 	public LevelChoser() {
 		
-		Thread.currentThread().interrupt();
-		
 		setType(Type.POPUP);
 		setResizable(false);
+		// Level chooser is the entry window; closing it should exit the app
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		setAlwaysOnTop(true);
 		setTitle("CHOOSE LEVEL");
@@ -84,7 +83,7 @@ public class LevelChoser extends JFrame {
 	
 	private void start(char difficulty)
 	{
-		new Thread(new Minesweeper(difficulty)).start();
+		new Minesweeper(difficulty);
         this.dispose();
 	}
 }
