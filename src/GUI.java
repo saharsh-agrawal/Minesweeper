@@ -5,6 +5,8 @@ import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.util.ArrayList;
+import java.util.List;
 
 public class GUI extends JFrame{
     
@@ -44,6 +46,9 @@ public class GUI extends JFrame{
     int timeY;
 
 	private javax.swing.Timer timer;
+    private javax.swing.Timer autoPlayTimer;
+    private Point lastAutoMoveCell;
+    private AutoMoveType lastAutoMoveType;
     
     public GUI(char diff){
         
@@ -138,10 +143,10 @@ public class GUI extends JFrame{
             
             // autoplay button
             g.setColor(Color.black);
-            g.setFont(new Font("Tahoma",Font.BOLD,25));
+            g.setFont(new Font("Tahoma",Font.BOLD,16));
             g.fillRect(autoPlayX,autoPlayY,130,50);
             g.setColor(Color.white);
-            g.drawString("Auto Play",autoPlayX+6,autoPlayY+35);
+            g.drawString("Auto Play: " + (autoPlay ? "ON" : "OFF"),autoPlayX+6,autoPlayY+30);
             
             
             // smiley painting
@@ -210,6 +215,18 @@ public class GUI extends JFrame{
                         if(model.isMine(i,j))
                             g.setColor(Color.red);
                     }
+                    
+                    // highlight last auto-play move
+                    if(lastAutoMoveCell != null && lastAutoMoveCell.x==i && lastAutoMoveCell.y==j)
+                    {
+                        g.setColor(Color.YELLOW);
+                        // if(lastAutoMoveType==AutoMoveType.FLAG)
+                        //     g.setColor(Color.ORANGE);
+                        // else
+                        //     g.setColor(Color.YELLOW);
+                        // g.drawRect(l*i+spacing,j*l+spacing+gap, l-2*spacing-1, l-2*spacing-1);
+                    }
+
                     // background when hover
                     if(mx>=l*i+spacing && mx<l*i+l-spacing && my>=j*l+spacing+gap+titleBar && my<j*l+l-spacing+gap+titleBar)
                         g.setColor(Color.LIGHT_GRAY);
@@ -309,6 +326,23 @@ public class GUI extends JFrame{
             }
         }
     }
+
+    private enum AutoMoveType {
+        REVEAL,
+        FLAG
+    }
+
+    private static class AutoMove {
+        final AutoMoveType type;
+        final int x;
+        final int y;
+
+        AutoMove(AutoMoveType type, int x, int y) {
+            this.type = type;
+            this.x = x;
+            this.y = y;
+        }
+    }
     
     public class Click implements MouseListener
     {
@@ -327,11 +361,16 @@ public class GUI extends JFrame{
             
             if(model.getGameState()==GameState.OPEN && (mx>autoPlayX && mx<autoPlayX+130 && my-titleBar>autoPlayY && my-titleBar<autoPlayY+50))
             {
-            	if(!autoPlay)
-            		autoPlay=true;
-            	else
-            		autoPlay=false;
-            	System.out.println(autoPlay);
+                autoPlay = !autoPlay;
+                System.out.println("AutoPlay="+autoPlay);
+                if(autoPlay)
+                {
+                	startAutoPlayRunIfNeeded();
+                }
+                else
+                {
+                	stopAutoPlayTimer();
+                }
             }
             	
             Point cell = getCellFromMouse(mx, my);
@@ -355,6 +394,11 @@ public class GUI extends JFrame{
             if(after!=before && (after==GameState.WON || after==GameState.LOST)){
             	new GameOver(GUI.this).setVisible(true);
             }
+            else if(autoPlay && after==GameState.OPEN)
+            {
+            	// user move may enable new obvious auto moves
+            	startAutoPlayRunIfNeeded();
+            }
             repaint();
         }
         @Override
@@ -374,6 +418,7 @@ public class GUI extends JFrame{
     	autoPlay=false;
     	msgY=-100;
       	model.restart();
+        stopAutoPlayTimer();
         repaint();
     }
 
@@ -390,6 +435,142 @@ public class GUI extends JFrame{
             }
         });
         timer.start();
+    }
+
+    private void startAutoPlayRunIfNeeded()
+    {
+            if(!autoPlay || model.getGameState() != GameState.OPEN)
+            {
+            	stopAutoPlayTimer();
+            	return;
+            }
+            if(autoPlayTimer == null)
+            {
+            	autoPlayTimer = new javax.swing.Timer(2000, new ActionListener() {
+            		@Override
+            		public void actionPerformed(ActionEvent e) {
+            			runAutoPlayStep();
+            		}
+            	});
+            	autoPlayTimer.setRepeats(true);
+            }
+            // restart ensures next step is 2 seconds from now
+            autoPlayTimer.restart();
+    }
+
+    private void stopAutoPlayTimer()
+    {
+        if(autoPlayTimer != null)
+        {
+            autoPlayTimer.stop();
+            autoPlayTimer = null;
+        }
+        lastAutoMoveCell = null;
+        lastAutoMoveType = null;
+    }
+
+    private void runAutoPlayStep()
+    {
+        if(!autoPlay || model.getGameState() != GameState.OPEN)
+        {
+            stopAutoPlayTimer();
+            return;
+        }
+        List<AutoMove> moves = computeObviousMoves();
+        if(moves.isEmpty())
+        {
+        	// no more obvious moves for current board
+        	stopAutoPlayTimer();
+        	return;
+        }
+        AutoMove move = moves.get(0);
+        int x = move.x;
+        int y = move.y;
+        GameState before = model.getGameState();
+        if(move.type == AutoMoveType.REVEAL)
+        {
+            model.reveal(x, y);
+        }
+        else if(move.type == AutoMoveType.FLAG)
+        {
+            model.flag(x, y);
+        }
+        lastAutoMoveCell = new Point(x, y);
+        lastAutoMoveType = move.type;
+        board.repaint();
+        GameState after = model.getGameState();
+        if(after != before && (after == GameState.WON || after == GameState.LOST))
+        {
+            new GameOver(GUI.this).setVisible(true);
+            stopAutoPlayTimer();
+        }
+    }
+
+    private List<AutoMove> computeObviousMoves()
+    {
+        List<AutoMove> moves = new ArrayList<AutoMove>();
+        boolean[][] addedReveal = new boolean[a][b];
+        boolean[][] addedFlag = new boolean[a][b];
+        for(int x=0; x<a; x++)
+        {
+            for(int y=0; y<b; y++)
+            {
+                if(!model.isRevealed(x, y))
+                    continue;
+                int number = model.getNeighbourCount(x, y);
+                if(number <= 0)
+                    continue;
+                int flagged = 0;
+                List<Point> covered = new ArrayList<Point>();
+                for(int dx=-1; dx<=1; dx++)
+                {
+                    for(int dy=-1; dy<=1; dy++)
+                    {
+                        if(dx==0 && dy==0)
+                            continue;
+                        int nx = x + dx;
+                        int ny = y + dy;
+                        if(nx<0 || nx>=a || ny<0 || ny>=b)
+                            continue;
+                        if(model.isFlagged(nx, ny))
+                        {
+                            flagged++;
+                        }
+                        else if(!model.isRevealed(nx, ny))
+                        {
+                            covered.add(new Point(nx, ny));
+                        }
+                    }
+                }
+                if(covered.isEmpty())
+                    continue;
+                // safe to reveal all covered neighbours
+                if(flagged == number)
+                {
+                    for(Point p : covered)
+                    {
+                        if(!addedReveal[p.x][p.y] && !model.isRevealed(p.x, p.y) && !model.isFlagged(p.x, p.y))
+                        {
+                            moves.add(new AutoMove(AutoMoveType.REVEAL, p.x, p.y));
+                            addedReveal[p.x][p.y] = true;
+                        }
+                    }
+                }
+                // all covered neighbours must be mines -> flag them
+                if(flagged + covered.size() == number)
+                {
+                    for(Point p : covered)
+                    {
+                        if(!addedFlag[p.x][p.y] && !model.isFlagged(p.x, p.y) && !model.isRevealed(p.x, p.y))
+                        {
+                            moves.add(new AutoMove(AutoMoveType.FLAG, p.x, p.y));
+                            addedFlag[p.x][p.y] = true;
+                        }
+                    }
+                }
+            }
+        }
+        return moves;
     }
 
     public boolean inSmiley()
