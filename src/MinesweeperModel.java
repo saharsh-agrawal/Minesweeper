@@ -19,6 +19,7 @@ public class MinesweeperModel {
     private GameState gameState;
     private Date startDate;
     private int elapsedSeconds;
+    private boolean minesInitialized;
 
     public MinesweeperModel(char difficulty) {
         this.difficulty = difficulty;
@@ -36,7 +37,7 @@ public class MinesweeperModel {
             case 'h':
                 cols = 30;
                 rows = 16;
-                mineCount = 99;
+                mineCount = 80;
                 break;
             default:
                 throw new IllegalArgumentException("Unsupported difficulty: " + difficulty);
@@ -56,6 +57,7 @@ public class MinesweeperModel {
         flaggedCount = 0;
         elapsedSeconds = 0;
         startDate = new Date();
+        minesInitialized = false;
 
         for (int i = 0; i < cols; i++) {
             for (int j = 0; j < rows; j++) {
@@ -65,17 +67,16 @@ public class MinesweeperModel {
                 flagged[i][j] = false;
             }
         }
-
-        setMines();
     }
 
-    private void setMines() {
+    private void setMines(int safeX, int safeY) {
         Random rand = new Random();
         int count = 0;
         while (count < mineCount) {
             int i = (int) (rand.nextDouble() * cols);
             int j = (int) (rand.nextDouble() * rows);
-            if (mines[i][j] == 1) {
+            // never place a mine on the first-clicked safe cell
+            if ((i == safeX && j == safeY) || mines[i][j] == 1) {
                 continue;
             }
             mines[i][j] = 1;
@@ -100,6 +101,8 @@ public class MinesweeperModel {
                 neighbours[i][j] = neighs;
             }
         }
+
+        minesInitialized = true;
     }
 
     public void flag(int x, int y) {
@@ -120,6 +123,9 @@ public class MinesweeperModel {
     public void reveal(int x, int y) {
         if (gameState != GameState.OPEN) {
             return;
+        }
+        if (!minesInitialized) {
+            setMines(x, y);
         }
         if (!flagged[x][y] && !revealed[x][y]) {
             revealed[x][y] = true;
