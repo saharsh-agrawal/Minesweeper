@@ -32,6 +32,9 @@ public class GameOver extends JFrame {
 				restart(gui);
 			}
 		});
+		// Avoid showing default focus highlight on this button
+		btnRestart.setFocusPainted(false);
+		btnRestart.setFocusable(false);
 		btnRestart.setFont(new Font("Tahoma", Font.BOLD, 15));
 		btnRestart.setBounds(33, 170, 140, 80);
 		contentPane.add(btnRestart);
@@ -42,6 +45,8 @@ public class GameOver extends JFrame {
 				newGame(gui);
 			}
 		});
+		btnNewGame.setFocusPainted(false);
+		btnNewGame.setFocusable(false);
 		btnNewGame.setFont(new Font("Tahoma", Font.BOLD, 15));
 		btnNewGame.setBounds(253, 170, 140, 80);
 		contentPane.add(btnNewGame);

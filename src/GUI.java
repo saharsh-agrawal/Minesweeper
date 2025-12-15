@@ -1,5 +1,4 @@
 import javax.swing.*;
-import java.util.*;
 import java.awt.*;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
@@ -9,7 +8,7 @@ import java.awt.event.ActionListener;
 
 public class GUI extends JFrame{
     
-	private GameState gameState;
+	private final MinesweeperModel model;
     private Board board;
 	
 	private final char difficulty;
@@ -23,9 +22,9 @@ public class GUI extends JFrame{
 	private int cellPadding;
 	
 	private int titleBar=31;
-	private int gap=57;
+    private int gap=57;
 	
-	int mx=-100;
+    int mx=-100;
     int my=-100;
     
     int msgX;
@@ -41,60 +40,42 @@ public class GUI extends JFrame{
     int minesLeftX;
     int minesLeftY;
     
-    Date startDate;
-    int sec;
     int timeX;
     int timeY;
-    
-    int revealedCount,flaggedCount;
-    
-    int[][] mines;
-    int[][] neighbours;
-    boolean[][] revealed;
-    boolean[][] flagged;
 
 	private javax.swing.Timer timer;
     
     public GUI(char diff){
         
+        model = new MinesweeperModel(diff);
         difficulty=diff;
-    	switch(difficulty)
+        a = model.getCols();
+        b = model.getRows();
+        mineCount = model.getMineCount();
+
+        switch(difficulty)
         {
-        	case 'e':
-        		a=10;
-        		b=8;
-        		l=70;
-        		spacing=3;
-        		mineCount=10;
-        		fontSize=40;
-        		cellPadding=23;
-        		break;
-        	case 'm':
-        		a=20;
-        		b=12;
-        		l=50;
-        		spacing=2;
-        		mineCount=40;
-        		fontSize=30;
-        		cellPadding=17;
-        		break;
-        	case 'h':
-        		a=30;
-        		b=16;
-        		l=35;
-        		spacing=2;
-        		mineCount=99;
-        		fontSize=20;
-        		cellPadding=11;
-        		break;
-        	default:
-        		this.dispose();
+            case 'e':
+                l=70;
+                spacing=3;
+                fontSize=40;
+                cellPadding=23;
+                break;
+            case 'm':
+                l=50;
+                spacing=2;
+                fontSize=30;
+                cellPadding=17;
+                break;
+            case 'h':
+                l=35;
+                spacing=2;
+                fontSize=20;
+                cellPadding=11;
+                break;
+            default:
+                this.dispose();
         }
-        
-        mines=new int[a][b];
-        neighbours=new int[a][b];
-        revealed=new boolean[a][b];
-        flagged=new boolean[a][b];
         
         msgX=15;
         msgY=-100;
@@ -110,7 +91,6 @@ public class GUI extends JFrame{
         timeY=4;
        
         restart();
-		setMines();
 		startTimer();
         
         this.setTitle("Minesweeper");
@@ -139,7 +119,7 @@ public class GUI extends JFrame{
             
             // msgbox
             String msg="";
-            switch(gameState)
+            switch(model.getGameState())
             {
             	case WON:
             		msg="YOU WIN!";
@@ -164,13 +144,13 @@ public class GUI extends JFrame{
             g.drawString("Auto Play",autoPlayX+6,autoPlayY+35);
             
             
-          // smiley painting
+            // smiley painting
             g.setColor(Color.yellow);
             g.fillOval(smileyX,smileyY,50,50);
             g.setColor(Color.black);
             g.fillOval(smileyX+10,smileyY+12,10,10);
             g.fillOval(smileyX+30,smileyY+12,10,10);
-            if(gameState==GameState.LOST)
+            if(model.getGameState()==GameState.LOST)
             {
                 g.fillRect(smileyX+12,smileyY+32,26,5);
                 
@@ -180,7 +160,7 @@ public class GUI extends JFrame{
                 g.fillRect(smileyX+10,smileyY+36,5,5);
                 g.fillRect(smileyX+35,smileyY+36,5,5);
             }
-            else if(gameState==GameState.WON || gameState==GameState.OPEN)
+            else if(model.getGameState()==GameState.WON || model.getGameState()==GameState.OPEN)
             {
                 g.fillRect(smileyX+12,smileyY+36,26,5);
 
@@ -191,24 +171,24 @@ public class GUI extends JFrame{
                 g.fillRect(smileyX+35,smileyY+32,5,5);
             }
             
-          // mines left display
+            // mines left display
             g.setColor(Color.white);
             g.setFont(new Font("Tahoma",Font.BOLD,28));
-            g.drawString("Mines left: "+(mineCount-flaggedCount),minesLeftX,minesLeftY);
+            g.drawString("Mines left: "+model.getMinesLeft(),minesLeftX,minesLeftY);
             
             // timer display
             g.setColor(Color.black);
             g.fillRect(timeX,timeY,100,50);
-            if(gameState==GameState.OPEN) sec=(int)((new Date().getTime()-startDate.getTime())/1000);
-            
-            String time=sec+"";
+            model.updateElapsedTime();
+			int sec = model.getElapsedSeconds();
+			String time=sec+"";
             if(sec<10) time="00"+time;
             if(sec<100 && sec>=10) time="0"+time;
             if(sec>999) time="999";
             
             g.setColor(Color.white);
-            if(gameState==GameState.WON) g.setColor(Color.green);
-            if(gameState==GameState.LOST) g.setColor(Color.red);
+            if(model.getGameState()==GameState.WON) g.setColor(Color.green);
+            if(model.getGameState()==GameState.LOST) g.setColor(Color.red);
             g.setFont(new Font("Tahoma",Font.BOLD,40));
             g.drawString(time,timeX+16,timeY+40);
             
@@ -224,10 +204,10 @@ public class GUI extends JFrame{
                     // background
                     g.setColor(new Color(10,110,210));
                     
-                    if(revealed[i][j])
+                    if(model.isRevealed(i,j))
                     {
                         g.setColor(Color.white);
-                        if(mines[i][j]==1)
+                        if(model.isMine(i,j))
                             g.setColor(Color.red);
                     }
                     // background when hover
@@ -237,7 +217,7 @@ public class GUI extends JFrame{
                     g.fillRect(l*i+spacing,j*l+spacing+gap, l-2*spacing, l-2*spacing);
                     
                     // flags
-                    if(flagged[i][j])
+                    if(model.isFlagged(i,j))
                     {
                     	g.setColor(Color.red);
                         g.fillRect(l*i+spacing+30*l/70,j*l+spacing+gap+7*l/70,30*l/70,20*l/70);
@@ -247,11 +227,11 @@ public class GUI extends JFrame{
                     }
                     
                     // number or mine
-                    if(revealed[i][j])
+                    if(model.isRevealed(i,j))
                     {
-                        if(mines[i][j]==0 && neighbours[i][j]!=0)
+                        if(!model.isMine(i,j) && model.getNeighbourCount(i,j)!=0)
                         {
-                            switch(neighbours[i][j])
+                            switch(model.getNeighbourCount(i,j))
                             {
                             	case 1:
                             		g.setColor(Color.blue);
@@ -279,9 +259,9 @@ public class GUI extends JFrame{
                             		break;
                             }
                             g.setFont(new Font("Tahoma",Font.BOLD,fontSize));
-                            g.drawString(neighbours[i][j]+"",l*i+spacing+cellPadding,j*l+spacing+gap+2*cellPadding);
+                            g.drawString(model.getNeighbourCount(i,j)+"",l*i+spacing+cellPadding,j*l+spacing+gap+2*cellPadding);
                         }
-                        else if(mines[i][j]==1){
+                        else if(model.isMine(i,j)){
                             g.setColor(Color.black);
                             g.fillRect(l*i+spacing+25*l/70,j*l+spacing+gap+25*l/70,20*l/70,20*l/70);
                             
@@ -343,9 +323,9 @@ public class GUI extends JFrame{
             my=e.getY();
             
             if(inSmiley())
-            	newGame();
+	            newGame();
             
-            if(gameState==GameState.OPEN && (mx>autoPlayX && mx<autoPlayX+130 && my-titleBar>autoPlayY && my-titleBar<autoPlayY+50))
+            if(model.getGameState()==GameState.OPEN && (mx>autoPlayX && mx<autoPlayX+130 && my-titleBar>autoPlayY && my-titleBar<autoPlayY+50))
             {
             	if(!autoPlay)
             		autoPlay=true;
@@ -354,107 +334,33 @@ public class GUI extends JFrame{
             	System.out.println(autoPlay);
             }
             	
-            	Point cell = getCellFromMouse(mx, my);
-            	if(cell != null && gameState==GameState.OPEN)
+            Point cell = getCellFromMouse(mx, my);
+            GameState before = model.getGameState();
+            if(cell != null && before==GameState.OPEN)
             {
-            		int x = cell.x;
-            		int y = cell.y;
-            	if(SwingUtilities.isLeftMouseButton(e))
+            	int x = cell.x;
+            	int y = cell.y;
+                if(SwingUtilities.isLeftMouseButton(e))
             	{
             		if(e.getClickCount()==1)
-            			reveal(x,y);
+                		model.reveal(x,y);
             		else if(e.getClickCount()==2)
-            			explode(x,y);
+                		model.chord(x,y);
             	}
             	
                 if(SwingUtilities.isRightMouseButton(e))
-                	flag(x,y);
+                    model.flag(x,y);
             }
-            checkVictory();
+            GameState after = model.getGameState();
+            if(after!=before && (after==GameState.WON || after==GameState.LOST)){
+            	new GameOver(GUI.this).setVisible(true);
+            }
             repaint();
         }
         @Override
         public void mouseEntered(MouseEvent e) {}
         @Override
         public void mouseExited(MouseEvent e) {}
-    }
-    
-    void flag(int x,int y)
-    {
-    	if(!revealed[x][y])
-    	{
-    		if(!flagged[x][y])
-        	{
-        		flagged[x][y]=true;
-        		flaggedCount++;
-        	}
-        	else
-        	{
-        		flagged[x][y]=false;
-        		flaggedCount--;
-        	}
-    	}
-    }
-    
-    void reveal(int x,int y)
-    {
-    	if(!flagged[x][y] && !revealed[x][y])
-    	{
-    		revealed[x][y]=true;
-            revealedCount++;
-            if(mines[x][y]==1)
-            {
-            		gameState=GameState.LOST;
-            	new GameOver(this).setVisible(true);
-            	return;
-            }
-            if(neighbours[x][y]==0)
-            	revealNeighbours(x,y);
-    	}
-    }
-    
-    void explode(int x,int y)
-    {
-    	if(revealed[x][y])
-    	{
-    		int count=0;
-    		if(x!=0 && y!=0 && flagged[x-1][y-1]) count++;
-            if(x!=0  && flagged[x-1][y]) count++;
-            if(x!=0 && y!=(b-1) && flagged[x-1][y+1]) count++;
-            
-            if(y!=0 && flagged[x][y-1]) count++;
-            if(y!=(b-1) && flagged[x][y+1]) count++;
-            
-            if(x!=(a-1) && y!=0 && flagged[x+1][y-1]) count++;
-            if(x!=(a-1) && flagged[x+1][y]) count++;
-            if(x!=(a-1) && y!=(b-1) && flagged[x+1][y+1]) count++;
-            
-            if(count==neighbours[x][y])
-            	revealNeighbours(x,y);
-    	}
-    }
-    
-    void revealNeighbours(int x,int y)
-    {
-    	if(x!=0 && y!=0) reveal(x-1,y-1);
-        if(x!=0) reveal(x-1,y);
-        if(x!=0 && y!=(b-1)) reveal(x-1,y+1);
-        
-        if(y!=0) reveal(x,y-1);
-        if(y!=(b-1)) reveal(x,y+1);
-        
-        if(x!=(a-1) && y!=0) reveal(x+1,y-1);
-        if(x!=(a-1)) reveal(x+1,y);
-        if(x!=(a-1) && y!=(b-1)) reveal(x+1,y+1);
-    }
-    
-    void checkVictory()
-    {
-        if(a*b-revealedCount==mineCount && gameState==GameState.OPEN)
-        {
-            	gameState=GameState.WON;
-        	new GameOver(this).setVisible(true);
-        }
     }
     
     public void newGame()
@@ -466,64 +372,14 @@ public class GUI extends JFrame{
     public void restart()
     {
     	autoPlay=false;
-        gameState=GameState.OPEN;
-    	revealedCount=flaggedCount=sec=0;
     	msgY=-100;
-    	startDate=new Date();
-    	
-    	for(int i=0;i<a;i++){
-            for(int j=0;j<b;j++){
-            	revealed[i][j]=false;
-                flagged[i][j]=false;
-            }
-        }
+      	model.restart();
         repaint();
-    }
-    
-    void setMines()
-    {
-    	for(int i=0;i<a;i++)
-            for(int j=0;j<b;j++)
-            	mines[i][j]=0;
-    	
-    	Random rand=new Random();
-    	int count=0;
-    	while (count < mineCount)
-        {
-            int i = (int) (rand.nextDouble() * a);
-            int j = (int) (rand.nextDouble() * b);
-            if (mines[i][j]==1)
-                continue;
-            else
-            {
-            	mines[i][j]=1;
-                count++;
-            }
-        }
-        for(int i=0;i<a;i++){
-            for(int j=0;j<b;j++){
-            	
-            	int neighs=0;
-                
-                if(i!=0 && j!=0) neighs+=mines[i-1][j-1];
-                if(i!=0) neighs+=mines[i-1][j];
-                if(i!=0 && j!=(b-1)) neighs+=mines[i-1][j+1];
-                
-                if(j!=0) neighs+=mines[i][j-1];
-                if(j!=(b-1)) neighs+=mines[i][j+1];
-                
-                if(i!=(a-1) && j!=0) neighs+=mines[i+1][j-1];
-                if(i!=(a-1)) neighs+=mines[i+1][j];
-                if(i!=(a-1) && j!=(b-1)) neighs+=mines[i+1][j+1];
-                
-                neighbours[i][j]=neighs;
-            }
-        }
     }
 
     private void startTimer() {
         if (timer != null) {
-                timer.stop();
+            timer.stop();
         }
         timer = new javax.swing.Timer(1000, new ActionListener() {
             @Override
@@ -546,7 +402,8 @@ public class GUI extends JFrame{
     }
     
 
-    private Point getCellFromMouse(int mouseX, int mouseY) {
+    private Point getCellFromMouse(int mouseX, int mouseY)
+    {
         if (mouseY < gap + titleBar || mouseY >= gap + titleBar + b * l) {
             return null;
         }
@@ -568,24 +425,24 @@ public class GUI extends JFrame{
         return null;
     }
 	
-    public GameState getGameState() {
-        return gameState;
+	public GameState getGameState() {
+		return model.getGameState();
     }
 
     public char getDifficulty() {
-        return difficulty;
+		return model.getDifficulty();
     }
 
     public int getMineCount() {
-        return mineCount;
+		return model.getMineCount();
     }
 
     public int getFlaggedCount() {
-        return flaggedCount;
+		return model.getFlaggedCount();
     }
 
     public int getElapsedSeconds() {
-        return sec;
+		return model.getElapsedSeconds();
     }
 	
 }

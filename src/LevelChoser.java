@@ -39,6 +39,8 @@ public class LevelChoser extends JFrame {
 			}
 		});
 		btnEasy.setFont(new Font("Tahoma", Font.PLAIN, 15));
+		btnEasy.setFocusPainted(false);
+		btnEasy.setFocusable(false);
 		btnEasy.setBounds(10, 116, 126, 54);
 		contentPane.add(btnEasy);
 		
@@ -49,6 +51,8 @@ public class LevelChoser extends JFrame {
 			}
 		});
 		btnMedium.setFont(new Font("Tahoma", Font.PLAIN, 15));
+		btnMedium.setFocusPainted(false);
+		btnMedium.setFocusable(false);
 		btnMedium.setBounds(146, 116, 126, 54);
 		contentPane.add(btnMedium);
 		
@@ -59,6 +63,8 @@ public class LevelChoser extends JFrame {
 			}
 		});
 		btnHard.setFont(new Font("Tahoma", Font.PLAIN, 15));
+		btnHard.setFocusPainted(false);
+		btnHard.setFocusable(false);
 		btnHard.setBounds(282, 116, 126, 54);
 		contentPane.add(btnHard);
 		
